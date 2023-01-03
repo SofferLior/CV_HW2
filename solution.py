@@ -32,7 +32,27 @@ class Solution:
         ssdd_tensor = np.zeros((num_of_rows,
                                 num_of_cols,
                                 len(disparity_values)))
-        """INSERT YOUR CODE HERE"""
+        win_offset = int(win_size/2)
+
+        left_image_pad = np.pad(left_image, ((win_offset, win_offset), (win_offset, win_offset), (0, 0)))
+        for disparity_idx, disparity in enumerate(disparity_values):
+            shifted_right_image = np.zeros(right_image.shape)
+            if disparity > 0:
+                shifted_right_image[:, :-disparity, :] = right_image[:, disparity:, :]
+            elif disparity == 0:
+                shifted_right_image = right_image
+            else:
+                shifted_right_image[:, -disparity:, :] = right_image[:, :disparity, :]
+            shifted_right_image_pad = np.pad(shifted_right_image, ((win_offset, win_offset), (win_offset, win_offset), (0, 0)))
+            diff_image = left_image_pad - shifted_right_image_pad
+            disparity_image = np.zeros((num_of_rows, num_of_cols))
+            for color in range(left_image.shape[2]):
+                disparity_image_sliding_sum = np.lib.stride_tricks.sliding_window_view(diff_image[:, :, color], (win_size, win_size))
+                disparity_image_sliding_sum_power = np.power(disparity_image_sliding_sum, 2)
+                disparity_image += np.sum(np.sum(disparity_image_sliding_sum_power, axis=2), axis=2)
+            disparity_image /= 3  # TODO: check if avg is required
+            ssdd_tensor[:, :, disparity_idx] = disparity_image
+
         ssdd_tensor -= ssdd_tensor.min()
         ssdd_tensor /= ssdd_tensor.max()
         ssdd_tensor *= 255.0
