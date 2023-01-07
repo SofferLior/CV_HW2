@@ -77,6 +77,8 @@ class Solution:
         # you can erase the label_no_smooth initialization.
         label_no_smooth = np.zeros((ssdd_tensor.shape[0], ssdd_tensor.shape[1]))
         """INSERT YOUR CODE HERE"""
+        num_of_dis = ssdd_tensor.shape[2]
+        label_no_smooth = ssdd_tensor.argmin(axis=2)
         return label_no_smooth
 
     @staticmethod
