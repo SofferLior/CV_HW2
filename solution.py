@@ -97,7 +97,8 @@ class Solution:
             Scores slice which for each column and disparity value states the
             score of the best route.
         """
-        num_labels, num_of_cols = c_slice.shape[0], c_slice.shape[1]
+        num_of_cols, num_labels = c_slice.shape[0], c_slice.shape[1]
+        c_slice = c_slice.T
         l_slice = np.zeros((num_labels, num_of_cols))
         """INSERT YOUR CODE HERE"""
 
@@ -113,31 +114,32 @@ class Solution:
             #     a = min([cost(i - 1, j - 1) + c_slice(i, j),
             #              cost(i, j - 1) + Occlusion,
             #              cost(i - 1, j) + Occlusion])
-            ### a = M[i,j]
+
             if j == 0:
-                a = i * 4
+                l = c_slice[i][j]
             elif i == 0:
-                a = j * 4
+                l = c_slice[i][j]
             else:
+                ### a = M[i,j]
                 a = min([cost(i, j - 1),
                          min([cost(i - 1, j - 1), cost(i + 1, j - 1)])  + p1,
-                         min([cost(i + k, j - 1) for k in range(num_labels-i+2,num_labels)])  + p2])
+                         min([cost(i + k, j - 1) for k in range(2,num_labels-i-2) if i<num_labels-2])  + p2])
 
                 l = a + c_slice[i][j] - min(Map[:, j-1])
 
             return round(l, 3)
 
-        Map = [[0 for i in range(0, num_labels)] for j in range(0, num_of_cols)]
+        Map = l_slice
 
 
-        for i in range(1, num_of_cols):
+        for i in range(1, num_labels):
             Map[i][0] = cost(i, 0)
-        for i in range(1, num_of_cols):
-            Map[0][i] = cost(0, i)
-        for i in range(1, num_of_cols):
-            for j in range(1, num_labels):
-                a = cost(i, j)
-                Map[i][j] = a
+        for j in range(1, num_of_cols):
+            Map[0][j] = cost(0, j)
+        for inx_lab in range(1, num_labels):
+            for inx_col in range(1, num_of_cols):
+                a = cost(inx_lab, inx_col)
+                Map[inx_lab][inx_col] = a
 
         l_slice = Map
         return l_slice
@@ -165,6 +167,10 @@ class Solution:
         """
         l = np.zeros_like(ssdd_tensor)
         """INSERT YOUR CODE HERE"""
+
+        for row in range(ssdd_tensor.shape[0]):
+            Solution.dp_grade_slice(ssdd_tensor[row],p1,p2)
+
         return self.naive_labeling(l)
 
     def dp_labeling_per_direction(self,
