@@ -105,24 +105,37 @@ class Solution:
             if Map[i][j] != 0:
                 return Map[i][j]
             a = 0
+            # if j == 0:
+            #     a = i * Occlusion
+            # elif i == 0:
+            #     a = j * Occlusion
+            # else:
+            #     a = min([cost(i - 1, j - 1) + c_slice(i, j),
+            #              cost(i, j - 1) + Occlusion,
+            #              cost(i - 1, j) + Occlusion])
+            ### a = M[i,j]
             if j == 0:
-                a = i * Occlusion
+                a = i * 4
             elif i == 0:
-                a = j * Occlusion
+                a = j * 4
             else:
-                a = min([cost(i - 1, j - 1) + pixel_cost(i, j),
-                         cost(i, j - 1) + Occlusion,
-                         cost(i - 1, j) + Occlusion])
-            return round(a, 3)
+                a = min([cost(i, j - 1),
+                         min([cost(i - 1, j - 1), cost(i + 1, j - 1)])  + p1,
+                         min([cost(i + k, j - 1) for k in range(num_labels-i+2,num_labels)])  + p2])
 
-        Map = [[0 for i in range(0, width)] for j in range(0, width)]
+                l = a + c_slice[i][j] - min(Map[:, j-1])
 
-        for i in range(1, width):
+            return round(l, 3)
+
+        Map = [[0 for i in range(0, num_labels)] for j in range(0, num_of_cols)]
+
+
+        for i in range(1, num_of_cols):
             Map[i][0] = cost(i, 0)
-        for i in range(1, width):
+        for i in range(1, num_of_cols):
             Map[0][i] = cost(0, i)
-        for i in range(1, width):
-            for j in range(1, width):
+        for i in range(1, num_of_cols):
+            for j in range(1, num_labels):
                 a = cost(i, j)
                 Map[i][j] = a
 
