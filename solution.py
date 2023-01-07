@@ -100,6 +100,33 @@ class Solution:
         num_labels, num_of_cols = c_slice.shape[0], c_slice.shape[1]
         l_slice = np.zeros((num_labels, num_of_cols))
         """INSERT YOUR CODE HERE"""
+
+        def cost(i, j):
+            if Map[i][j] != 0:
+                return Map[i][j]
+            a = 0
+            if j == 0:
+                a = i * Occlusion
+            elif i == 0:
+                a = j * Occlusion
+            else:
+                a = min([cost(i - 1, j - 1) + pixel_cost(i, j),
+                         cost(i, j - 1) + Occlusion,
+                         cost(i - 1, j) + Occlusion])
+            return round(a, 3)
+
+        Map = [[0 for i in range(0, width)] for j in range(0, width)]
+
+        for i in range(1, width):
+            Map[i][0] = cost(i, 0)
+        for i in range(1, width):
+            Map[0][i] = cost(0, i)
+        for i in range(1, width):
+            for j in range(1, width):
+                a = cost(i, j)
+                Map[i][j] = a
+
+        l_slice = Map
         return l_slice
 
     def dp_labeling(self,
