@@ -121,9 +121,25 @@ class Solution:
                 l = c_slice[i][j]
             else:
                 ### a = M[i,j]
-                a = min([cost(i, j - 1),
-                         min([cost(i - 1, j - 1), cost(i + 1, j - 1)])  + p1,
-                         min([cost(i + k, j - 1) for k in range(2,num_labels-i-2) if i<num_labels-2])  + p2])
+                cond1 = cost(i, j - 1)
+
+                # cond2
+                if i+1 < Map.shape[0]:
+                    cond2 = min([cost(i - 1, j - 1), cost(i + 1, j - 1)])  + p1
+                else:
+                    cond2 = cost(i - 1, j - 1) + p1
+
+                # cond3
+                tmp_ls = []
+                for k in range(2,num_labels-i-2):
+                    tmp_ls.append(cost(i + k, j - 1))
+                if len(tmp_ls):
+                    cond3  = min(tmp_ls)  + p2
+                    a = min([cond1, cond2, cond3])
+                else:
+                    a = min([cond1, cond2])
+
+
 
                 l = a + c_slice[i][j] - min(Map[:, j-1])
 
@@ -169,9 +185,17 @@ class Solution:
         """INSERT YOUR CODE HERE"""
 
         for row in range(ssdd_tensor.shape[0]):
-            Solution.dp_grade_slice(ssdd_tensor[row],p1,p2)
+            cm_l = Solution.dp_grade_slice(ssdd_tensor[row],p1,p2)
+            l[row][:] = cm_l
 
-        return self.naive_labeling(l)
+        l_new = np.zeros_like(ssdd_tensor)
+        for i in range(l.shape[0]):
+            for j in range(l.shape[1]):
+                l_new[i][j] = min([ min(l[i][:]),
+                                    min(l[:][j])
+                                    ])
+
+        return l_new
 
     def dp_labeling_per_direction(self,
                                   ssdd_tensor: np.ndarray,
