@@ -211,9 +211,9 @@ class Solution:
                 min_label = np.argmin(scores[i, j, :])
 
                 # Set the depth value for this pixel to the corresponding disparity value
-                depth_map[i, j] = min_label #- self.dsp_range
+                depth_map[i, j] = min_label
 
-        return depth_map
+        return depth_map.astype(np.int32)
 
     def dp_labeling_per_direction(self,
                                   ssdd_tensor: np.ndarray,
