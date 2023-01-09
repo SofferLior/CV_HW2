@@ -97,69 +97,75 @@ class Solution:
             Scores slice which for each column and disparity value states the
             score of the best route.
         """
+        # Get the number of columns and labels in the slice
         num_of_cols, num_labels = c_slice.shape[0], c_slice.shape[1]
-        c_slice = c_slice.T
-        l_slice = np.zeros((num_labels, num_of_cols))
-        """INSERT YOUR CODE HERE"""
 
-        def cost(i, j):
-            if Map[i][j] != 0:
-                return Map[i][j]
-            a = 0
-            # if j == 0:
-            #     a = i * Occlusion
-            # elif i == 0:
-            #     a = j * Occlusion
-            # else:
-            #     a = min([cost(i - 1, j - 1) + c_slice(i, j),
-            #              cost(i, j - 1) + Occlusion,
-            #              cost(i - 1, j) + Occlusion])
+        # Initialize the scores array
+        scores = np.zeros((num_of_cols, num_labels))
 
-            if j == 0:
-                l = c_slice[i][j]
-            elif i == 0:
-                l = c_slice[i][j]
-            else:
-                ### a = M[i,j]
-                cond1 = cost(i, j - 1)
+        # Iterate through each column in the slice
+        for i in range(num_of_cols):
+            # Initialize the minimum score for this column to a large value
+            min_score = float('inf')
 
-                # cond2
-                if i+1 < Map.shape[0]:
-                    cond2 = min([cost(i - 1, j - 1), cost(i + 1, j - 1)])  + p1
+            # Iterate through each label in the slice
+            for j in range(num_labels):
+                # Calculate the score for this label
+                score = c_slice[i, j]
+
+                # If this is the first column, there is no previous column to consider
+                if i == 0:
+                    scores[i, j] = score
+                elif j == 0:
+                    scores[i, j] = score
                 else:
-                    cond2 = cost(i - 1, j - 1) + p1
+                    # Calculate the minimum score for the previous column
+                    prev_min = min(scores[i - 1, max(0, j - 2):j + 3])
 
-                # cond3
-                tmp_ls = []
-                for k in range(2,num_labels-i-2):
-                    tmp_ls.append(cost(i + k, j - 1))
-                if len(tmp_ls):
-                    cond3  = min(tmp_ls)  + p2
-                    a = min([cond1, cond2, cond3])
-                else:
-                    a = min([cond1, cond2])
+                    score1 = scores[i, j - 1]
+                    # cond1 = scores(i, j - 1)
+                    #
+                    # # cond2
+                    #
+                    # cond2 = min([score(i - 1, j - 1), score(i + 1, j - 1)])  + p1
+                    # else:
+                    #     cond2 = cost(i - 1, j - 1) + p1
+                    #
+                    # # cond3
+                    # tmp_ls = []
+                    # for k in range(2,num_labels-i-2):
+                    #     tmp_ls.append(cost(i + k, j - 1))
+                    # if len(tmp_ls):
+                    #     cond3  = min(tmp_ls)  + p2
+                    #     a = min([cond1, cond2, cond3])
+                    # else:
+                    #     a = min([cond1, cond2])
 
+                    # Add the penalty for the offset between the current label and the
+                    # label with the minimum score in the previous column
+                    # offset = abs(j - np.argmin(scores[i - 1, max(0, j - 2):j + 3]))
+                    # if offset == 1:
+                    if i + 1 < scores.shape[0]:
+                        score2 = p1 + min([scores[i - 1, j - 1], scores[i + 1, j - 1]])
+                    else:
+                        score2 = p1 + scores[i - 1, j - 1]
 
+                    tmp_ls=[]
+                    for k in range(2,num_labels-i-2):
+                        tmp_ls.append(scores[i + k, j - 1])
+                    if len(tmp_ls):
+                        score3  = min(tmp_ls)  + p2
 
-                l = a + c_slice[i][j] - min(Map[:, j-1])
+                    scoreMin = min([score1, score2, score3])
 
-            return round(l, 3)
+                    # Add the minimum score from the previous column to the current score
+                    scores[i, j] = score + min(scores[:,j-1]) + scoreMin
 
-        Map = l_slice
+            # Update the minimum score for the current column
+            min_score = min(min_score, min(scores[i, :]))
 
-
-        for i in range(1, num_labels):
-            Map[i][0] = cost(i, 0)
-        for j in range(1, num_of_cols):
-            Map[0][j] = cost(0, j)
-        for inx_lab in range(1, num_labels):
-            for inx_col in range(1, num_of_cols):
-                a = cost(inx_lab, inx_col)
-                Map[inx_lab][inx_col] = a
-
-        l_slice = Map
-        return l_slice
-
+        return scores
+    #
     def dp_labeling(self,
                     ssdd_tensor: np.ndarray,
                     p1: float,
@@ -181,21 +187,33 @@ class Solution:
         Returns:
             Dynamic Programming depth estimation matrix of shape HxW.
         """
-        l = np.zeros_like(ssdd_tensor)
-        """INSERT YOUR CODE HERE"""
+        # Get the number of rows and columns in the tensor
+        num_rows, num_cols = ssdd_tensor.shape[:2]
 
-        for row in range(ssdd_tensor.shape[0]):
-            cm_l = Solution.dp_grade_slice(ssdd_tensor[row],p1,p2)
-            l[row][:] = cm_l
+        # Initialize the scores tensor
+        scores = np.zeros(ssdd_tensor.shape)
 
-        l_new = np.zeros_like(ssdd_tensor)
-        for i in range(l.shape[0]):
-            for j in range(l.shape[1]):
-                l_new[i][j] = min([ min(l[i][:]),
-                                    min(l[:][j])
-                                    ])
+        # Iterate through each row in the tensor
+        for i in range(num_rows):
+            # Calculate the scores slice for this row
+            scores_slice = Solution.dp_grade_slice(ssdd_tensor[i, :, :], p1, p2)
 
-        return l_new
+            # Store the scores slice in the scores tensor
+            scores[i, :, :] = scores_slice
+
+        # Initialize the depth map to all zeros
+        depth_map = np.zeros((num_rows, num_cols))
+
+        # Iterate through each pixel in the tensor
+        for i in range(num_rows):
+            for j in range(num_cols):
+                # Find the label with the minimum score for this pixel
+                min_label = np.argmin(scores[i, j, :])
+
+                # Set the depth value for this pixel to the corresponding disparity value
+                depth_map[i, j] = min_label #- self.dsp_range
+
+        return depth_map
 
     def dp_labeling_per_direction(self,
                                   ssdd_tensor: np.ndarray,
