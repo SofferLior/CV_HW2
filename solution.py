@@ -28,11 +28,11 @@ class Solution:
             HxWx(2*dsp_range+1).
         """
         num_of_rows, num_of_cols = left_image.shape[0], left_image.shape[1]
-        disparity_values = range(-dsp_range, dsp_range+1)
+        disparity_values = range(-dsp_range, dsp_range + 1)
         ssdd_tensor = np.zeros((num_of_rows,
                                 num_of_cols,
                                 len(disparity_values)))
-        win_offset = int(win_size/2)
+        win_offset = int(win_size / 2)
 
         left_image_pad = np.pad(left_image, ((win_offset, win_offset), (win_offset, win_offset), (0, 0)))
         for disparity_idx, disparity in enumerate(disparity_values):
@@ -43,11 +43,13 @@ class Solution:
                 shifted_right_image = right_image
             else:
                 shifted_right_image[:, -disparity:, :] = right_image[:, :disparity, :]
-            shifted_right_image_pad = np.pad(shifted_right_image, ((win_offset, win_offset), (win_offset, win_offset), (0, 0)))
+            shifted_right_image_pad = np.pad(shifted_right_image,
+                                             ((win_offset, win_offset), (win_offset, win_offset), (0, 0)))
             diff_image = left_image_pad - shifted_right_image_pad
             disparity_image = np.zeros((num_of_rows, num_of_cols))
             for color in range(left_image.shape[2]):
-                disparity_image_sliding_sum = np.lib.stride_tricks.sliding_window_view(diff_image[:, :, color], (win_size, win_size))
+                disparity_image_sliding_sum = np.lib.stride_tricks.sliding_window_view(diff_image[:, :, color],
+                                                                                       (win_size, win_size))
                 disparity_image_sliding_sum_power = np.power(disparity_image_sliding_sum, 2)
                 disparity_image += np.sum(np.sum(disparity_image_sliding_sum_power, axis=2), axis=2)
             disparity_image /= 3  # TODO: check if avg is required
@@ -74,10 +76,6 @@ class Solution:
         Returns:
             Naive labels HxW matrix.
         """
-        # you can erase the label_no_smooth initialization.
-        label_no_smooth = np.zeros((ssdd_tensor.shape[0], ssdd_tensor.shape[1]))
-        """INSERT YOUR CODE HERE"""
-        num_of_dis = ssdd_tensor.shape[2]
         label_no_smooth = ssdd_tensor.argmin(axis=2)
         return label_no_smooth
 
@@ -187,33 +185,13 @@ class Solution:
         Returns:
             Dynamic Programming depth estimation matrix of shape HxW.
         """
-        # Get the number of rows and columns in the tensor
-        num_rows, num_cols = ssdd_tensor.shape[:2]
+        l = np.zeros_like(ssdd_tensor)
 
-        # Initialize the scores tensor
-        scores = np.zeros(ssdd_tensor.shape)
-
-        # Iterate through each row in the tensor
-        for i in range(num_rows):
+        for i in range(ssdd_tensor.shape[0]):
             # Calculate the scores slice for this row
-            scores_slice = Solution.dp_grade_slice(ssdd_tensor[i, :, :], p1, p2)
+            l[i, :, :] = Solution.dp_grade_slice(ssdd_tensor[i, :, :], p1, p2)
 
-            # Store the scores slice in the scores tensor
-            scores[i, :, :] = scores_slice
-
-        # Initialize the depth map to all zeros
-        depth_map = np.zeros((num_rows, num_cols))
-
-        # Iterate through each pixel in the tensor
-        for i in range(num_rows):
-            for j in range(num_cols):
-                # Find the label with the minimum score for this pixel
-                min_label = np.argmin(scores[i, j, :])
-
-                # Set the depth value for this pixel to the corresponding disparity value
-                depth_map[i, j] = min_label
-
-        return depth_map.astype(np.int32)
+        return self.naive_labeling(l)
 
     def dp_labeling_per_direction(self,
                                   ssdd_tensor: np.ndarray,
@@ -246,7 +224,39 @@ class Solution:
         num_of_directions = 8
         l = np.zeros_like(ssdd_tensor)
         direction_to_slice = {}
-        """INSERT YOUR CODE HERE"""
+        for direction in range(1, num_of_directions + 1):
+            if direction <= num_of_directions / 2:
+                l = np.zeros_like(ssdd_tensor)
+
+                if direction == 1:
+                    direction_to_slice[direction] = self.dp_labeling(ssdd_tensor, p1, p2)
+                elif direction == 2:
+                    for rows_diag in range(1, ssdd_tensor.shape[0]):
+                        print(f'{rows_diag}/{ssdd_tensor.shape[0]}')
+                        #  TODO: find different way instead of loop over 3rd dim
+                        dig = Solution.dp_grade_slice(ssdd_tensor.diagonal(-rows_diag).T, p1, p2)
+                        for i in range(ssdd_tensor.shape[2]):
+                            np.fill_diagonal(l[rows_diag:, :, i], dig[:, i])
+                    for cols_diag in range(1, ssdd_tensor.shape[1]):
+                        Solution.dp_grade_slice(ssdd_tensor.diagonal(cols_diag), p1, p2)
+                        for i in range(ssdd_tensor.shape[2]):
+                            np.fill_diagonal(l[:, cols_diag:, i], dig[:, i])
+                    dig = Solution.dp_grade_slice(ssdd_tensor.diagonal(), p1, p2)
+                    for i in range(ssdd_tensor.shape[2]):
+                        np.fill_diagonal(l[:, :, i], dig[:, i])
+
+                elif direction == 3:
+                    for j in range(ssdd_tensor.shape[1]):
+                        l[:, j, :] = Solution.dp_grade_slice(ssdd_tensor[:, j, :], p1, p2)
+                        direction_to_slice[direction] = self.naive_labeling(l)
+
+                elif direction == 4:
+                    flip_ssdd = np.flip(ssdd_tensor, 1)
+                    #  TODO: do diagonal on flip_ssdd
+                else:
+                    print('wrong direction')
+            else:
+                direction_to_slice[direction] = direction_to_slice[direction - num_of_directions / 2]
         return direction_to_slice
 
     def sgm_labeling(self, ssdd_tensor: np.ndarray, p1: float, p2: float):
