@@ -74,54 +74,54 @@ def main():
     plt.colorbar()
     plt.title('Naive Depth')
 
-    # Smooth disparity image - Dynamic Programming
-    tt = tic()
-    label_smooth_dp = solution.dp_labeling(ssdd, COST1, COST2)
-    print(f"Dynamic Programming done in {toc(tt):.4f}[seconds]")
+    # # Smooth disparity image - Dynamic Programming
+    # tt = tic()
+    # label_smooth_dp = solution.dp_labeling(ssdd, COST1, COST2)
+    # print(f"Dynamic Programming done in {toc(tt):.4f}[seconds]")
+    #
+    # # plot the left image and the estimated depth
+    # plt.figure()
+    # plt.subplot(1, 2, 1)
+    # plt.imshow(left_image)
+    # plt.title('Source Image')
+    # plt.subplot(1, 2, 2)
+    # plt.imshow(label_smooth_dp)
+    # plt.colorbar()
+    # plt.title('Smooth Depth - DP')
+    #
+    # # Compute forward map of the left image to the right image.
+    # mapped_image_smooth_dp = forward_map(left_image, labels=label_smooth_dp)
+    # # plot left image, forward map image and right image
+    # plt.figure()
+    # plt.subplot(1, 3, 1)
+    # plt.imshow(left_image)
+    # plt.title('Source Image')
+    # plt.subplot(1, 3, 2)
+    # plt.imshow(mapped_image_smooth_dp)
+    # plt.title('Smooth Forward map - DP')
+    # plt.subplot(1, 3, 3)
+    # plt.imshow(right_image)
+    # plt.title('Right Image')
 
-    # plot the left image and the estimated depth
-    plt.figure()
-    plt.subplot(1, 2, 1)
-    plt.imshow(left_image)
-    plt.title('Source Image')
-    plt.subplot(1, 2, 2)
-    plt.imshow(label_smooth_dp)
-    plt.colorbar()
-    plt.title('Smooth Depth - DP')
-
-    # Compute forward map of the left image to the right image.
-    mapped_image_smooth_dp = forward_map(left_image, labels=label_smooth_dp)
-    # plot left image, forward map image and right image
-    plt.figure()
-    plt.subplot(1, 3, 1)
-    plt.imshow(left_image)
-    plt.title('Source Image')
-    plt.subplot(1, 3, 2)
-    plt.imshow(mapped_image_smooth_dp)
-    plt.title('Smooth Forward map - DP')
-    plt.subplot(1, 3, 3)
-    plt.imshow(right_image)
-    plt.title('Right Image')
-
-    # Generate a dictionary which maps each direction to a label map:
-    tt = tic()
-    direction_to_vote = solution.dp_labeling_per_direction(ssdd, COST1, COST2)
-    print(f"Dynamic programming in all directions done in {toc(tt):.4f}"
-          f"[seconds]")
-
-    # Plot all directions as well as the image, in the center of the plot:
-    plt.figure()
-    for i in range(1, 1 + 9):
-        plt.subplot(3, 3, i)
-        if i < 5:
-            plt.imshow(direction_to_vote[i])
-            plt.title(f'Direction {i}')
-        elif i == 5:
-            plt.imshow(left_image)
-            plt.title(f'Left Image')
-        else:
-            plt.imshow(direction_to_vote[i - 1])
-            plt.title(f'Direction {i - 1}')
+    # # Generate a dictionary which maps each direction to a label map:
+    # tt = tic()
+    # direction_to_vote = solution.dp_labeling_per_direction(ssdd, COST1, COST2)
+    # print(f"Dynamic programming in all directions done in {toc(tt):.4f}"
+    #       f"[seconds]")
+    #
+    # # Plot all directions as well as the image, in the center of the plot:
+    # plt.figure()
+    # for i in range(1, 1 + 9):
+    #     plt.subplot(3, 3, i)
+    #     if i < 5:
+    #         plt.imshow(direction_to_vote[i])
+    #         plt.title(f'Direction {i}')
+    #     elif i == 5:
+    #         plt.imshow(left_image)
+    #         plt.title(f'Left Image')
+    #     else:
+    #         plt.imshow(direction_to_vote[i - 1])
+    #         plt.title(f'Direction {i - 1}')
 
     # Smooth disparity image - Semi-Global Mapping
     tt = tic()

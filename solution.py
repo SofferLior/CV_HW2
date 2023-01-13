@@ -150,9 +150,12 @@ class Solution:
 
                     tmp_ls=[]
                     for k in range(2,num_labels-i-2):
-                        tmp_ls.append(scores[i + k, j - 1])
+                        if i + k < scores.shape[0]:
+                            tmp_ls.append(scores[i + k, j - 1])
                     if len(tmp_ls):
                         score3  = min(tmp_ls)  + p2
+                    else :
+                        score3 = max([score1, score2]) + p2
 
                     scoreMin = min([score1, score2, score3])
 
@@ -229,7 +232,9 @@ class Solution:
                 l = np.zeros_like(ssdd_tensor)
 
                 if direction == 1:
-                    direction_to_slice[direction] = self.dp_labeling(ssdd_tensor, p1, p2)
+                    # TODO: re check
+                    # direction_to_slice[direction] = self.dp_labeling(ssdd_tensor, p1, p2)
+                    direction_to_slice[direction] = np.zeros((288, 384), dtype=np.int64)
                 elif direction == 2:
                     for rows_diag in range(1, ssdd_tensor.shape[0]):
                         print(f'{rows_diag}/{ssdd_tensor.shape[0]}')
@@ -253,36 +258,188 @@ class Solution:
                 elif direction == 4:
                     flip_ssdd = np.flip(ssdd_tensor, 1)
                     #  TODO: do diagonal on flip_ssdd
+                    # TODO: do it
+                    direction_to_slice[direction] = np.zeros((288, 384), dtype=np.int64)
                 else:
                     print('wrong direction')
             else:
-                direction_to_slice[direction] = direction_to_slice[direction - num_of_directions / 2]
+                direction_to_slice[direction] = direction_to_slice[direction - num_of_directions // 2]
         return direction_to_slice
 
+# TODO SUGGESTION : look at it ( THIS I THINK FIT THE dp_labeling FUN NAME)
+    # def dp_labeling_per_direction(ssdd_tensor, p1, p2, weights):
+    #     """
+    #     Extracts slices from the SSDD tensor in different directions and computes scores for each disparity
+    #     value in each pixel based on the scores of different routes along those slices using a weighted sum.
+    #
+    #     Parameters:
+    #         - ssdd_tensor: A tensor of the sum of squared differences for every pixel in a window of size:
+    #                        win_size X win_size for the: 2*dsp_range + 1 possible disparity values.
+    #                        The tensor shape should be: HxWx(2*dsp_range+1).
+    #         - p1: Penalty for taking disparity value with 1 offset.
+    #         - p2: Penalty for taking disparity value more than 2 offset.
+    #         - weights: A list of weights for each direction. The length of the list should be equal to the number
+    #                    of directions used.
+    #
+    #     Returns:
+    #         - label_smooth_dp: A matrix of shape HxW (same number of rows and columns as in ssdd_tensor).
+    #                            The matrix should contain the optimal assignment according to the Dynamic
+    #                            Programming method using a weighted sum of the scores along different slices.
+    #     """
+    #     H, W, D = ssdd_tensor.shape
+    #     label_smooth_dp = np.zeros((H, W))
+    #     for i in range(H):
+    #         for j in range(W):
+    #             # Extract slices from the SSDD tensor in different directions
+    #             slice_horizontal = ssdd_tensor[i, max(0, j - dsp_range):min(W, j + dsp_range + 1), :]
+    #             slice_vertical = ssdd_tensor[max(0, i - dsp_range):min(H, i + dsp_range + 1), j, :]
+    #             slice_diagonal = ssdd_tensor[max(0, i - dsp_range):min(H, i + dsp_range + 1),
+    #                              max(0, j - dsp_range):min(W, j + dsp_range + 1), :]
+    #
+    #             # Compute scores for each disparity value in the pixel using dp_grade_slice function
+    #             scores_horizontal = dp_grade_slice(slice_horizontal, p1, p2)
+    #             scores_vertical = dp_grade_slice(slice_vertical, p1, p2)
+    #             scores_diagonal = dp_grade_slice(slice_diagonal, p1, p2)
+    #
+    #             # Compute final score for the current pixel using a weighted sum of the scores along different slices
+    #             scores = np.sum(
+    #                 weights[0] * scores_horizontal + weights[1] * scores_vertical + weights[2] * scores_diagonal,
+    #                 axis=0)
+    #
+    #             # Select the disparity value with the highest score for the current pixel
+    #             label_smooth_dp[i, j] = np.argmin(scores)
+    #     return label_smooth_dp
+
+# TODO ONE MORE REFERENCE TO LOOK AT ( THIS I THINK FIT THE CORRECT FUN NAME)
+    # def dp_labeling_per_direction(ssdd_tensor, p1, p2):
+    #     """
+    #     Computes the depth map according to the Semi-Global Mapping approach for each direction.
+    #
+    #     Parameters:
+    #         - ssdd_tensor: A tensor of the sum of squared differences for every pixel in a window of size
+    #                        win_size X win_size, for the 2*dsp_range + 1 possible disparity values.
+    #                        The tensor shape should be HxWx(2*dsp_range+1).
+    #         - p1: Penalty for taking disparity value with 1 offset.
+    #         - p2: Penalty for taking disparity value more than 2 offset.
+    #
+    #     Returns:
+    #         - direction_to_slice: Dictionary int->np.ndarray which maps each direction to the
+    #                               corresponding dynamic programming estimation of depth based on
+    #                               that direction.
+    #     """
+    #     # Get the number of rows and columns in the ssdd tensor
+    #     H, W, _ = ssdd_tensor.shape
+    #
+    #     # Define the range of the disparities
+    #     dsp_range = ssdd_tensor.shape[2] // 2
+    #
+    #     # Initialize the direction_to_slice dictionary
+    #     direction_to_slice = {}
+    #
+    #     # Iterate through each pixel in the image
+    #     for i in range(H):
+    #         for j in range(W):
+    #             # Extract slices from the SSDD tensor in different directions
+    #             slice_horizontal = ssdd_tensor[i, max(0, j - dsp_range):min(W, j + dsp_range + 1), :]
+    #             slice_vertical = ssdd_tensor[max(0, i - dsp_range):min(H, i + dsp_range + 1), j, :]
+    #             slice_diagonal = ssdd_tensor[max(0, i - dsp_range):min(H, i + dsp_range + 1),
+    #                              max(0, j - dsp_range):min(W, j + dsp_range + 1), :]
+    #
+    #            # Calculate the scores matrices for each slice
+    #             scores_horizontal = Solution.dp_grade_slice(slice_horizontal, p1, p2)
+    #             scores_vertical = Solution.dp_grade_slice(slice_vertical, p1, p2)
+    #             scores_diagonal = Solution.dp_grade_slice(slice_diagonal, p1, p2)
+    #
+    #             # Add the scores matrices to the dictionary
+    #             direction_to_slice[1] = scores_horizontal
+    #             direction_to_slice[2] = scores_vertical
+    #             direction_to_slice[3] = scores_diagonal
+    #
+    #             return direction_to_slice
+
+
     def sgm_labeling(self, ssdd_tensor: np.ndarray, p1: float, p2: float):
-        """Estimate the depth map according to the SGM algorithm.
+        #     """Estimate the depth map according to the SGM algorithm.
+        #
+        #     For each direction in 1, ..., 8, calculate scores tensors
+        #     according to dp_grade_slice and the method which allows you to
+        #     extract slices along each direction.
+        #
+        #     You may use helper methods (functions) that you write on your own.
+        #     We found `np.diagonal` to be very helpful to extract diagonal slices.
+        #     `np.unravel_index` might be helpful if you're thinking in MATLAB
+        #     notations: it's the ind2sub equivalent.
+        #
+        #     Args:
+        #         ssdd_tensor: A tensor of the sum of squared differences for
+        #         every pixel in a window of size win_size X win_size, for the
+        #         2*dsp_range + 1 possible disparity values.
+        #         p1: penalty for taking disparity value with 1 offset.
+        #         p2: penalty for taking disparity value more than 2 offset.
+        #
+        #     Returns:
+        #         Semi-Global Mapping depth estimation matrix of shape HxW.
+        #     """
+        # Get the number of rows and columns in the ssdd tensor
+        H, W, _ = ssdd_tensor.shape
 
-        For each direction in 1, ..., 8, calculate scores tensors
-        according to dp_grade_slice and the method which allows you to
-        extract slices along each direction.
+        # Define the range of the disparities
+        dsp_range = ssdd_tensor.shape[2]
 
-        You may use helper methods (functions) that you write on your own.
-        We found `np.diagonal` to be very helpful to extract diagonal slices.
-        `np.unravel_index` might be helpful if you're thinking in MATLAB
-        notations: it's the ind2sub equivalent.
+        # Initialize the L-scores tensors list
+        L_scores = []
 
-        Args:
-            ssdd_tensor: A tensor of the sum of squared differences for
-            every pixel in a window of size win_size X win_size, for the
-            2*dsp_range + 1 possible disparity values.
-            p1: penalty for taking disparity value with 1 offset.
-            p2: penalty for taking disparity value more than 2 offset.
+        # Iterate through each pixel in the image
+        for i in range(H):
+            for j in range(W):
+                # Extract slices from the SSDD tensor in different directions
+                slice_horizontal = ssdd_tensor[i, max(0, j - dsp_range):min(W, j + dsp_range + 1), :]
+                slice_vertical = ssdd_tensor[max(0, i - dsp_range):min(H, i + dsp_range + 1), j, :]
+                slice_diagonal = ssdd_tensor[max(0, i - dsp_range):min(H, i + dsp_range + 1),
+                                 max(0, j - dsp_range):min(W, j + dsp_range + 1), :]
 
-        Returns:
-            Semi-Global Mapping depth estimation matrix of shape HxW.
-        """
-        num_of_directions = 8
-        l = np.zeros_like(ssdd_tensor)
-        """INSERT YOUR CODE HERE"""
-        return self.naive_labeling(l)
+                # Compute the L-scores matrix for each direction
+                L_scores.append(Solution.dp_grade_slice(slice_horizontal, p1, p2))
+                L_scores.append(Solution.dp_grade_slice(slice_vertical, p1, p2))
+                # L_scores.append(Solution.dp_grade_slice(slice_diagonal, p1, p2))
+
+        # Average all L-scores tensors to obtain a single L score matrix
+        L_scores_avg = sum(L_scores) / len(L_scores)
+
+        # Initialize the label_smooth_sgm matrix with zeros
+        label_smooth_sgm = np.zeros((H, W))
+
+        # Iterate through each pixel in the L-scores matrix
+        for i in range(H):
+            for j in range(W):
+                # Get the disparity value which corresponds to the minimal L value in this pixel
+                label_smooth_sgm[i, j] = np.argmin(L_scores_avg[i, j, :])
+
+        return label_smooth_sgm
+    # def sgm_labeling(self, ssdd_tensor: np.ndarray, p1: float, p2: float):
+    #     """Estimate the depth map according to the SGM algorithm.
+    #
+    #     For each direction in 1, ..., 8, calculate scores tensors
+    #     according to dp_grade_slice and the method which allows you to
+    #     extract slices along each direction.
+    #
+    #     You may use helper methods (functions) that you write on your own.
+    #     We found `np.diagonal` to be very helpful to extract diagonal slices.
+    #     `np.unravel_index` might be helpful if you're thinking in MATLAB
+    #     notations: it's the ind2sub equivalent.
+    #
+    #     Args:
+    #         ssdd_tensor: A tensor of the sum of squared differences for
+    #         every pixel in a window of size win_size X win_size, for the
+    #         2*dsp_range + 1 possible disparity values.
+    #         p1: penalty for taking disparity value with 1 offset.
+    #         p2: penalty for taking disparity value more than 2 offset.
+    #
+    #     Returns:
+    #         Semi-Global Mapping depth estimation matrix of shape HxW.
+    #     """
+    #     num_of_directions = 8
+    #     l = np.zeros_like(ssdd_tensor)
+    #     """INSERT YOUR CODE HERE"""
+    #     return self.naive_labeling(l)
 
