@@ -248,12 +248,12 @@ class Solution:
                             np.fill_diagonal(l_score_direction[:, :, d], slice_score[:, d])
                         else:
                             np.fill_diagonal(l_score_direction[:, slice_idx - ssdd_tensor.shape[0]:, d], slice_score[:, d])
-                if direction == 4:
-                    l_score_direction = np.fliplr(l_score_direction)
-                if direction == 6:
-                    l_score_direction = np.flipud(np.fliplr(l_score_direction))
-                if direction == 8:
-                    l_score_direction = np.flipud(l_score_direction)
+            if direction == 4:
+                l_score_direction = np.fliplr(l_score_direction)
+            if direction == 6:
+                l_score_direction = np.flipud(np.fliplr(l_score_direction))
+            if direction == 8:
+                l_score_direction = np.flipud(l_score_direction)
             direction_to_slice[direction] = self.naive_labeling(l_score_direction)
 
         return direction_to_slice
@@ -309,12 +309,12 @@ class Solution:
                         else:
                             np.fill_diagonal(l_score_direction[:, slice_idx - ssdd_tensor.shape[0]:, d],
                                              slice_score[:, d])
-                if direction == 4:
-                    l_score_direction = np.fliplr(l_score_direction)
-                if direction == 6:
-                    l_score_direction = np.flipud(np.fliplr(l_score_direction))
-                if direction == 8:
-                    l_score_direction = np.flipud(l_score_direction)
+            if direction == 4:
+                l_score_direction = np.fliplr(l_score_direction)
+            if direction == 6:
+                l_score_direction = np.flipud(np.fliplr(l_score_direction))
+            if direction == 8:
+                l_score_direction = np.flipud(l_score_direction)
             l += l_score_direction
 
         l /= num_of_directions
