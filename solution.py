@@ -5,11 +5,11 @@ from scipy.signal import convolve2d
 
 def create_diagonal_slice(ssdd_tensor):
     slices = []
-    for rows_diag in range(ssdd_tensor.shape[0] - 1, 0, -1):
-        slices.append(ssdd_tensor.diagonal(-rows_diag))
+    for row in range(1, ssdd_tensor.shape[0]):
+        slices.append(ssdd_tensor.diagonal(-row))
     slices.append(ssdd_tensor.diagonal())
-    for cols_diag in range(1, ssdd_tensor.shape[1]):
-        slices.append(ssdd_tensor.diagonal(cols_diag))
+    for col in range(1, ssdd_tensor.shape[1]):
+        slices.append(ssdd_tensor.diagonal(col))
     return slices
 
 
@@ -21,10 +21,14 @@ def create_slice_for_direction(ssdd_tensor, direction):
     elif direction == 3 or direction == 7:
         for col in range(ssdd_tensor.shape[1]):
             slices.append(ssdd_tensor[:, col, :])
-    elif direction == 2 or direction == 6:
+    elif direction == 2:
         slices = create_diagonal_slice(ssdd_tensor)
-    elif direction == 4 or direction == 8:
+    elif direction == 4:
         slices = create_diagonal_slice(np.fliplr(ssdd_tensor))
+    elif direction == 6:
+        slices = create_diagonal_slice(np.flipud(np.fliplr(ssdd_tensor)))
+    elif direction == 8:
+        slices = create_diagonal_slice(np.flipud(ssdd_tensor))
     return slices
 
 
@@ -224,53 +228,32 @@ class Solution:
             for slice_idx in range(len(slices)):
                 if direction == 1:
                     l_score_direction[slice_idx, :, :] = self.dp_grade_slice(slices[slice_idx].T, p1, p2).T
-                elif direction == 2:
-                    slice_score = self.dp_grade_slice(slices[slice_idx], p1, p2).T
-                    for d in range(ssdd_tensor.shape[2]):
-                        if slice_idx <= ssdd_tensor.shape[0]:
-                            np.fill_diagonal(l_score_direction[ssdd_tensor.shape[0] - slice_idx:, :, d],
-                                             slice_score[:, d])
-                        else:
-                            np.fill_diagonal(l_score_direction[:, slice_idx - ssdd_tensor.shape[0]:, d],
-                                             slice_score[:, d])
+
                 elif direction == 3:
                     l_score_direction[:, slice_idx, :] = self.dp_grade_slice(slices[slice_idx].T, p1, p2).T
-                elif direction == 4:
-                    slice_score = self.dp_grade_slice(slices[slice_idx], p1, p2).T
-                    for d in range(ssdd_tensor.shape[2]):
-                        if slice_idx <= ssdd_tensor.shape[0]:
-                            np.fill_diagonal(l_score_direction[ssdd_tensor.shape[0] - slice_idx:, :, d],
-                                             slice_score[:, d])
-                        else:
-                            np.fill_diagonal(l_score_direction[:, slice_idx - ssdd_tensor.shape[0]:, d],
-                                             slice_score[:, d])
-                    l_score_direction = np.fliplr(l_score_direction)
+
                 elif direction == 5:
                     l_score_direction[slice_idx, :, :] = np.fliplr(
                         self.dp_grade_slice(np.fliplr(slices[slice_idx].T), p1, p2).T)
-                elif direction == 6:
-                    slice_score = self.dp_grade_slice(np.flipud(slices[slice_idx]), p1, p2).T
-                    for d in range(ssdd_tensor.shape[2]):
-                        if slice_idx <= ssdd_tensor.shape[0]:
-                            np.fill_diagonal(l_score_direction[ssdd_tensor.shape[0] - slice_idx:, :, d],
-                                             slice_score[:, d])
-                        else:
-                            np.fill_diagonal(l_score_direction[:, slice_idx - ssdd_tensor.shape[0]:, d],
-                                             slice_score[:, d])
+
                 elif direction == 7:
                     l_score_direction[:, slice_idx, :] = np.flipud(
                         self.dp_grade_slice(np.flipud(slices[slice_idx]).T, p1, p2).T)
-                elif direction == 8:
-                    for slice_idx in range(len(slices)):
-                        slice_score = self.dp_grade_slice(np.flipud(slices[slice_idx]), p1, p2).T
-                        for d in range(ssdd_tensor.shape[2]):
-                            if slice_idx <= ssdd_tensor.shape[0]:
-                                np.fill_diagonal(l_score_direction[ssdd_tensor.shape[0] - slice_idx:, :, d],
-                                                 slice_score[:, d])
-                            else:
-                                np.fill_diagonal(l_score_direction[:, slice_idx - ssdd_tensor.shape[0]:, d],
-                                                 slice_score[:, d])
+                else:
+                    slice_score = self.dp_grade_slice(slices[slice_idx], p1, p2).T
+                    for d in range(ssdd_tensor.shape[2]):
+                        if slice_idx < ssdd_tensor.shape[0]:
+                            np.fill_diagonal(l_score_direction[slice_idx:, :, d], slice_score[:, d])
+                        elif slice_idx == ssdd_tensor.shape[0]:
+                            np.fill_diagonal(l_score_direction[:, :, d], slice_score[:, d])
+                        else:
+                            np.fill_diagonal(l_score_direction[:, slice_idx - ssdd_tensor.shape[0]:, d], slice_score[:, d])
+                if direction == 4:
                     l_score_direction = np.fliplr(l_score_direction)
+                if direction == 6:
+                    l_score_direction = np.flipud(np.fliplr(l_score_direction))
+                if direction == 8:
+                    l_score_direction = np.flipud(l_score_direction)
             direction_to_slice[direction] = self.naive_labeling(l_score_direction)
 
         return direction_to_slice
@@ -305,56 +288,34 @@ class Solution:
             for slice_idx in range(len(slices)):
                 if direction == 1:
                     l_score_direction[slice_idx, :, :] = self.dp_grade_slice(slices[slice_idx].T, p1, p2).T
-                elif direction == 2:
-                    slice_score = self.dp_grade_slice(slices[slice_idx], p1, p2).T
-                    for d in range(ssdd_tensor.shape[2]):
-                        if slice_idx <= ssdd_tensor.shape[0]:
-                            np.fill_diagonal(l_score_direction[ssdd_tensor.shape[0] - slice_idx:, :, d],
-                                             slice_score[:, d])
-                        else:
-                            np.fill_diagonal(l_score_direction[:, slice_idx - ssdd_tensor.shape[0]:, d],
-                                             slice_score[:, d])
+
                 elif direction == 3:
                     l_score_direction[:, slice_idx, :] = self.dp_grade_slice(slices[slice_idx].T, p1, p2).T
-                elif direction == 4:
-                    slice_score = self.dp_grade_slice(slices[slice_idx], p1, p2).T
-                    for d in range(ssdd_tensor.shape[2]):
-                        if slice_idx <= ssdd_tensor.shape[0]:
-                            np.fill_diagonal(l_score_direction[ssdd_tensor.shape[0] - slice_idx:, :, d],
-                                             slice_score[:, d])
-                        else:
-                            np.fill_diagonal(l_score_direction[:, slice_idx - ssdd_tensor.shape[0]:, d],
-                                             slice_score[:, d])
-                    l_score_direction = np.fliplr(l_score_direction)
+
                 elif direction == 5:
                     l_score_direction[slice_idx, :, :] = np.fliplr(
                         self.dp_grade_slice(np.fliplr(slices[slice_idx].T), p1, p2).T)
-                elif direction == 6:
-                    slice_score = self.dp_grade_slice(np.flipud(slices[slice_idx]), p1, p2).T
-                    for d in range(ssdd_tensor.shape[2]):
-                        if slice_idx <= ssdd_tensor.shape[0]:
-                            np.fill_diagonal(l_score_direction[ssdd_tensor.shape[0] - slice_idx:, :, d],
-                                             slice_score[:, d])
-                        else:
-                            np.fill_diagonal(l_score_direction[:, slice_idx - ssdd_tensor.shape[0]:, d],
-                                             slice_score[:, d])
+
                 elif direction == 7:
                     l_score_direction[:, slice_idx, :] = np.flipud(
                         self.dp_grade_slice(np.flipud(slices[slice_idx]).T, p1, p2).T)
-                elif direction == 8:
-                    for slice_idx in range(len(slices)):
-                        slice_score = self.dp_grade_slice(np.flipud(slices[slice_idx]), p1, p2).T
-                        for d in range(ssdd_tensor.shape[2]):
-                            if slice_idx <= ssdd_tensor.shape[0]:
-                                np.fill_diagonal(l_score_direction[ssdd_tensor.shape[0] - slice_idx:, :, d],
-                                                 slice_score[:, d])
-                            else:
-                                np.fill_diagonal(l_score_direction[:, slice_idx - ssdd_tensor.shape[0]:, d],
-                                                 slice_score[:, d])
+                else:
+                    slice_score = self.dp_grade_slice(slices[slice_idx], p1, p2).T
+                    for d in range(ssdd_tensor.shape[2]):
+                        if slice_idx < ssdd_tensor.shape[0]:
+                            np.fill_diagonal(l_score_direction[slice_idx:, :, d], slice_score[:, d])
+                        elif slice_idx == ssdd_tensor.shape[0]:
+                            np.fill_diagonal(l_score_direction[:, :, d], slice_score[:, d])
+                        else:
+                            np.fill_diagonal(l_score_direction[:, slice_idx - ssdd_tensor.shape[0]:, d],
+                                             slice_score[:, d])
+                if direction == 4:
                     l_score_direction = np.fliplr(l_score_direction)
-
+                if direction == 6:
+                    l_score_direction = np.flipud(np.fliplr(l_score_direction))
+                if direction == 8:
+                    l_score_direction = np.flipud(l_score_direction)
             l += l_score_direction
 
         l /= num_of_directions
         return self.naive_labeling(l)
-
