@@ -52,7 +52,7 @@ class Solution:
                                                                                        (win_size, win_size))
                 disparity_image_sliding_sum_power = np.power(disparity_image_sliding_sum, 2)
                 disparity_image += np.sum(np.sum(disparity_image_sliding_sum_power, axis=2), axis=2)
-            disparity_image /= 3  # TODO: check if avg is required
+            disparity_image /= 3
             ssdd_tensor[:, :, disparity_idx] = disparity_image
 
         ssdd_tensor -= ssdd_tensor.min()
@@ -95,74 +95,42 @@ class Solution:
             Scores slice which for each column and disparity value states the
             score of the best route.
         """
-        # Get the number of columns and labels in the slice
-        num_of_cols, num_labels = c_slice.shape[0], c_slice.shape[1]
-
-        # Initialize the scores array
-        scores = np.zeros((num_of_cols, num_labels))
+        num_labels, num_of_cols = c_slice.shape[0], c_slice.shape[1]
+        l_slice = np.zeros((num_labels, num_of_cols))
 
         # Iterate through each column in the slice
-        for i in range(num_of_cols):
-            # Initialize the minimum score for this column to a large value
-            min_score = float('inf')
+        for col in range(num_of_cols):
 
             # Iterate through each label in the slice
-            for j in range(num_labels):
+            for d in range(num_labels):
                 # Calculate the score for this label
-                score = c_slice[i, j]
+                score = c_slice[d, col]
 
                 # If this is the first column, there is no previous column to consider
-                if i == 0:
-                    scores[i, j] = score
-                elif j == 0:
-                    scores[i, j] = score
+                if col == 0:
+                    l_slice[d, col] = score
                 else:
-                    # Calculate the minimum score for the previous column
-                    prev_min = min(scores[i - 1, max(0, j - 2):j + 3])
+                    # Score 1 - previous col, same d
+                    score1 = l_slice[d, col - 1]
 
-                    score1 = scores[i, j - 1]
-                    # cond1 = scores(i, j - 1)
-                    #
-                    # # cond2
-                    #
-                    # cond2 = min([score(i - 1, j - 1), score(i + 1, j - 1)])  + p1
-                    # else:
-                    #     cond2 = cost(i - 1, j - 1) + p1
-                    #
-                    # # cond3
-                    # tmp_ls = []
-                    # for k in range(2,num_labels-i-2):
-                    #     tmp_ls.append(cost(i + k, j - 1))
-                    # if len(tmp_ls):
-                    #     cond3  = min(tmp_ls)  + p2
-                    #     a = min([cond1, cond2, cond3])
-                    # else:
-                    #     a = min([cond1, cond2])
-
-                    # Add the penalty for the offset between the current label and the
-                    # label with the minimum score in the previous column
-                    # offset = abs(j - np.argmin(scores[i - 1, max(0, j - 2):j + 3]))
-                    # if offset == 1:
-                    if i + 1 < scores.shape[0]:
-                        score2 = p1 + min([scores[i - 1, j - 1], scores[i + 1, j - 1]])
+                    # Score 2 - previous col, d +-1
+                    if d + 1 == num_labels:
+                        score2 = p1 + l_slice[d - 1, col - 1]
+                    elif d == 0:
+                        score2 = p1 + l_slice[d + 1, col - 1]
                     else:
-                        score2 = p1 + scores[i - 1, j - 1]
+                        score2 = p1 + min(l_slice[d - 1, col - 1], l_slice[d + 1, col - 1])
 
-                    tmp_ls=[]
-                    for k in range(2,num_labels-i-2):
-                        tmp_ls.append(scores[i + k, j - 1])
-                    if len(tmp_ls):
-                        score3  = min(tmp_ls)  + p2
+                    tmp_ls = []
+                    for k in range(num_labels):
+                        if k != d and k != d + 1 and k != d - 1:
+                            tmp_ls.append(l_slice[k, col - 1])
+                    score3 = p2 + min(tmp_ls)
 
-                    scoreMin = min([score1, score2, score3])
+                    l_slice[d, col] = score + min([score1, score2, score3]) - min(l_slice[:, col - 1])
 
-                    # Add the minimum score from the previous column to the current score
-                    scores[i, j] = score + min(scores[:,j-1]) + scoreMin
+        return l_slice
 
-            # Update the minimum score for the current column
-            min_score = min(min_score, min(scores[i, :]))
-
-        return scores
     #
     def dp_labeling(self,
                     ssdd_tensor: np.ndarray,
@@ -189,7 +157,7 @@ class Solution:
 
         for i in range(ssdd_tensor.shape[0]):
             # Calculate the scores slice for this row
-            l[i, :, :] = Solution.dp_grade_slice(ssdd_tensor[i, :, :], p1, p2)
+            l[i, :, :] = self.dp_grade_slice(ssdd_tensor[i, :, :].T, p1, p2).T
 
         return self.naive_labeling(l)
 
@@ -225,38 +193,33 @@ class Solution:
         l = np.zeros_like(ssdd_tensor)
         direction_to_slice = {}
         for direction in range(1, num_of_directions + 1):
-            if direction <= num_of_directions / 2:
-                l = np.zeros_like(ssdd_tensor)
-
-                if direction == 1:
-                    direction_to_slice[direction] = self.dp_labeling(ssdd_tensor, p1, p2)
-                elif direction == 2:
-                    for rows_diag in range(1, ssdd_tensor.shape[0]):
-                        print(f'{rows_diag}/{ssdd_tensor.shape[0]}')
-                        #  TODO: find different way instead of loop over 3rd dim
-                        dig = Solution.dp_grade_slice(ssdd_tensor.diagonal(-rows_diag).T, p1, p2)
-                        for i in range(ssdd_tensor.shape[2]):
-                            np.fill_diagonal(l[rows_diag:, :, i], dig[:, i])
-                    for cols_diag in range(1, ssdd_tensor.shape[1]):
-                        Solution.dp_grade_slice(ssdd_tensor.diagonal(cols_diag), p1, p2)
-                        for i in range(ssdd_tensor.shape[2]):
-                            np.fill_diagonal(l[:, cols_diag:, i], dig[:, i])
-                    dig = Solution.dp_grade_slice(ssdd_tensor.diagonal(), p1, p2)
-                    for i in range(ssdd_tensor.shape[2]):
-                        np.fill_diagonal(l[:, :, i], dig[:, i])
-
-                elif direction == 3:
-                    for j in range(ssdd_tensor.shape[1]):
-                        l[:, j, :] = Solution.dp_grade_slice(ssdd_tensor[:, j, :], p1, p2)
-                        direction_to_slice[direction] = self.naive_labeling(l)
-
-                elif direction == 4:
-                    flip_ssdd = np.flip(ssdd_tensor, 1)
-                    #  TODO: do diagonal on flip_ssdd
-                else:
-                    print('wrong direction')
+            print(f'direction {direction}')
+            if direction == 1:
+                direction_to_slice[direction] = self.dp_labeling(ssdd_tensor, p1, p2)
+            elif direction == 2:
+                direction_to_slice[direction] = self.naive_labeling(self.diag_slice(ssdd_tensor, p1, p2))
+            elif direction == 3:
+                direction_to_slice[direction] = self.naive_labeling(self.col_slice(ssdd_tensor, p1, p2))
+            elif direction == 4:
+                direction_to_slice[direction] = self.naive_labeling(self.diag_slice(np.flip(ssdd_tensor, 1), p1, p2))
+                direction_to_slice[direction] = np.flip(direction_to_slice[direction], 1)
+            elif direction == 5:
+                direction_to_slice[direction] = self.dp_labeling(np.flip(ssdd_tensor, 1), p1, p2)
+                direction_to_slice[direction] = np.flip(direction_to_slice[direction], 1)
+            elif direction == 6:
+                direction_to_slice[direction] = self.naive_labeling(self.diag_slice(np.flip(ssdd_tensor, 0), p1, p2))
+                direction_to_slice[direction] = np.flip(direction_to_slice[direction], 0)
+            elif direction == 7:
+                direction_to_slice[direction] = self.naive_labeling(self.col_slice(np.flip(ssdd_tensor, 0), p1, p2))
+                direction_to_slice[direction] = np.flip(direction_to_slice[direction], 0)
+            elif direction == 8:
+                direction_to_slice[direction] = self.naive_labeling(
+                    self.diag_slice(np.flip(np.flip(ssdd_tensor, 1), 0), p1, p2))
+                direction_to_slice[direction] = np.flip(direction_to_slice[direction], 0)
+                direction_to_slice[direction] = np.flip(direction_to_slice[direction], 1)
             else:
-                direction_to_slice[direction] = direction_to_slice[direction - num_of_directions / 2]
+                print('wrong direction')
+
         return direction_to_slice
 
     def sgm_labeling(self, ssdd_tensor: np.ndarray, p1: float, p2: float):
@@ -283,6 +246,30 @@ class Solution:
         """
         num_of_directions = 8
         l = np.zeros_like(ssdd_tensor)
-        """INSERT YOUR CODE HERE"""
-        return self.naive_labeling(l)
+        direction_to_slice_dic = self.dp_labeling_per_direction(ssdd_tensor, p1, p2)
+        l = np.zeros((ssdd_tensor.shape[0],ssdd_tensor.shape[1]))
+        for direction in range(1, num_of_directions + 1):
+            l += direction_to_slice_dic[direction]
+        l /= num_of_directions
+        return l.astype(int)
 
+    def diag_slice(self, ssdd_tensor, p1, p2):
+        l = np.zeros_like(ssdd_tensor)
+        for rows_diag in range(1, ssdd_tensor.shape[0]):
+            dig = self.dp_grade_slice(ssdd_tensor.diagonal(-rows_diag), p1, p2).T
+            for i in range(ssdd_tensor.shape[2]):
+                np.fill_diagonal(l[rows_diag:, :, i], dig[:, i])
+        for cols_diag in range(1, ssdd_tensor.shape[1]):
+            dig = self.dp_grade_slice(ssdd_tensor.diagonal(cols_diag), p1, p2).T
+            for i in range(ssdd_tensor.shape[2]):
+                np.fill_diagonal(l[:, cols_diag:, i], dig[:, i])
+        dig = self.dp_grade_slice(ssdd_tensor.diagonal(), p1, p2).T
+        for i in range(ssdd_tensor.shape[2]):
+            np.fill_diagonal(l[:, :, i], dig[:, i])
+        return l
+
+    def col_slice(self, ssdd_tensor, p1, p2):
+        l = np.zeros_like(ssdd_tensor)
+        for j in range(ssdd_tensor.shape[1]):
+            l[:, j, :] = self.dp_grade_slice(ssdd_tensor[:, j, :].T, p1, p2).T
+        return l
