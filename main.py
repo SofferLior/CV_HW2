@@ -13,8 +13,8 @@ DISPARITY_RANGE = 20
 ##########################################################
 # Don't forget to fill in your IDs!!!
 # students' IDs:
-ID1 = '123456789'
-ID2 = '987654321'
+ID1 = '203135058'
+ID2 = '308088624'
 ##########################################################
 
 
@@ -157,7 +157,7 @@ def main():
     COST1 = 0.5           # YOU MAY CHANGE THIS
     COST2 = 3.0           # YOU MAY CHANGE THIS
     WIN_SIZE = 3          # YOU MAY CHANGE THIS
-    DISPARITY_RANGE = 20  # YOU MAY CHANGE THIS
+    DISPARITY_RANGE = 25  # YOU MAY CHANGE THIS
 
     your_left_image, your_right_image = load_data(is_your_data=True)
     solution = Solution()
