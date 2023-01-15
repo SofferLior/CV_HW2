@@ -233,8 +233,7 @@ class Solution:
                     l_score_direction[:, slice_idx, :] = self.dp_grade_slice(slices[slice_idx].T, p1, p2).T
 
                 elif direction == 5:
-                    l_score_direction[slice_idx, :, :] = np.fliplr(
-                        self.dp_grade_slice(np.fliplr(slices[slice_idx].T), p1, p2).T)
+                    l_score_direction[slice_idx, :, :] = self.dp_grade_slice(np.fliplr(slices[slice_idx].T), p1, p2).T
 
                 elif direction == 7:
                     l_score_direction[:, slice_idx, :] = np.flipud(
@@ -248,7 +247,7 @@ class Solution:
                             np.fill_diagonal(l_score_direction[:, :, d], slice_score[:, d])
                         else:
                             np.fill_diagonal(l_score_direction[:, slice_idx - ssdd_tensor.shape[0]:, d], slice_score[:, d])
-            if direction == 4:
+            if direction == 4 or direction == 5:
                 l_score_direction = np.fliplr(l_score_direction)
             if direction == 6:
                 l_score_direction = np.flipud(np.fliplr(l_score_direction))
@@ -293,8 +292,7 @@ class Solution:
                     l_score_direction[:, slice_idx, :] = self.dp_grade_slice(slices[slice_idx].T, p1, p2).T
 
                 elif direction == 5:
-                    l_score_direction[slice_idx, :, :] = np.fliplr(
-                        self.dp_grade_slice(np.fliplr(slices[slice_idx].T), p1, p2).T)
+                    l_score_direction[slice_idx, :, :] = self.dp_grade_slice(np.fliplr(slices[slice_idx].T), p1, p2).T
 
                 elif direction == 7:
                     l_score_direction[:, slice_idx, :] = np.flipud(
@@ -309,7 +307,7 @@ class Solution:
                         else:
                             np.fill_diagonal(l_score_direction[:, slice_idx - ssdd_tensor.shape[0]:, d],
                                              slice_score[:, d])
-            if direction == 4:
+            if direction == 4 or direction == 5:
                 l_score_direction = np.fliplr(l_score_direction)
             if direction == 6:
                 l_score_direction = np.flipud(np.fliplr(l_score_direction))
