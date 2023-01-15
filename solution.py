@@ -222,7 +222,6 @@ class Solution:
         l = np.zeros_like(ssdd_tensor)
         direction_to_slice = {}
         for direction in range(1, num_of_directions + 1):
-            print(f'direction {direction}')
             slices = create_slice_for_direction(ssdd_tensor, direction)
             l_score_direction = np.zeros_like(ssdd_tensor)
             for slice_idx in range(len(slices)):
