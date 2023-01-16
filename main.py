@@ -155,9 +155,9 @@ def main():
     ########################### YOUR IMAGE PLAYGROUND #########################
     ###########################################################################
     COST1 = 0.5           # YOU MAY CHANGE THIS
-    COST2 = 3.0           # YOU MAY CHANGE THIS
+    COST2 = 2.0           # YOU MAY CHANGE THIS
     WIN_SIZE = 3          # YOU MAY CHANGE THIS
-    DISPARITY_RANGE = 25  # YOU MAY CHANGE THIS
+    DISPARITY_RANGE = 30  # YOU MAY CHANGE THIS
 
     your_left_image, your_right_image = load_data(is_your_data=True)
     solution = Solution()
